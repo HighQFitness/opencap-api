@@ -2321,9 +2321,7 @@ class CustomAuthToken(ObtainAuthToken):
 
             user.save()
             login(request, user)
-            print("HERE")    
             if not (user.otp_verified and user.otp_skip_till and user.otp_skip_till > timezone.now()):
-                print("HERE 2")    
                 send_otp_challenge(user)
                 otp_challenge_sent = True
 
