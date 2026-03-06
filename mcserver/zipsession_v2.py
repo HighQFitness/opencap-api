@@ -150,7 +150,7 @@ class SessionDirectoryConstructor:
             )
     
     def collect_geometry_vtp_files_from_s3(self, model_name):
-        s3 = boto3.client("s3")
+        s3 = boto3.client("s3", region_name=settings.AWS_S3_REGION_NAME)
         root_dir_path = self.get_root_dir_path()
         geometry_dir = os.path.join(root_dir_path, "OpenSimData", "Model", "Geometry")
         os.makedirs(geometry_dir, exist_ok=True)

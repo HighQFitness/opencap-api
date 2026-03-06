@@ -626,6 +626,7 @@ class SessionViewSet(viewsets.ModelViewSet):
 
             s3_client = boto3.client(
                 's3',
+                region_name=settings.AWS_S3_REGION_NAME,
                 endpoint_url=settings.AWS_S3_ENDPOINT_URL,
                 aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
                 aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
@@ -815,6 +816,7 @@ class SessionViewSet(viewsets.ModelViewSet):
     def get_presigned_url(self, request, pk):
         s3_client = boto3.client(
             's3',
+            region_name=settings.AWS_S3_REGION_NAME,
             aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
             aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
         )
@@ -2307,6 +2309,7 @@ class CustomAuthToken(ObtainAuthToken):
             serializer.is_valid(raise_exception=True)
             user = serializer.validated_data['user']
             token, created = Token.objects.get_or_create(user=user)
+            print(token)
 
             print("LOGGED IN")
 
@@ -2318,17 +2321,22 @@ class CustomAuthToken(ObtainAuthToken):
 
             user.save()
             login(request, user)
-
+            print("HERE")    
             if not (user.otp_verified and user.otp_skip_till and user.otp_skip_till > timezone.now()):
+                print("HERE 2")    
                 send_otp_challenge(user)
                 otp_challenge_sent = True
 
         except ValidationError:
+            print("VALIDATION ERROR")    
+            print(str(traceback.format_exc()))
             if settings.DEBUG:
                 print(str(traceback.format_exc()))
                 raise APIException(_("error") % {"error_message": traceback.format_exc()})
             raise APIException(_('credentials_incorrect'))
         except Exception:
+            print("API EXCEPTION ERROR")    
+            print(str(traceback.format_exc()))
             if settings.DEBUG:
                 raise APIException(_("error") % {"error_message": str(traceback.format_exc())})
             raise APIException(_('login_error'))

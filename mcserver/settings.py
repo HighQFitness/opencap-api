@@ -205,7 +205,7 @@ EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default=SENDGRID_API_KEY)
 EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
 EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
 
-DEFAULT_FROM_EMAIL = "noreply@opencap.ai"
+DEFAULT_FROM_EMAIL = "wajahat@eurustechnologies.com"
 
 LOGO_LINK = "https://app.opencap.ai/images/opencap-logo.png"
 
