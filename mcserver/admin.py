@@ -38,8 +38,6 @@ class UserAdmin(UserAdmin):
                 'country',
                 'reason',
                 'newsletter',
-                'otp_verified',
-                'otp_skip_till',                
                 'profile_picture',
                 'institutional_use'
             )}),

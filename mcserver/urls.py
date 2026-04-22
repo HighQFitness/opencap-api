@@ -27,10 +27,7 @@ from mcserver.views import (
     UserCreate,
     UserDelete,
     CustomAuthToken,
-    verify,
     set_institutional_use,
-    reset_otp_challenge,
-    check_otp_verified,
     UserViewSet,
     UserInstitutionalUseView,
     ResetPasswordView,
@@ -49,7 +46,6 @@ from mcserver.views import (
 from rest_framework import routers, serializers, viewsets
 from rest_framework.authtoken.views import obtain_auth_token
 
-from django_otp.forms import OTPAuthenticationForm
 from django.http import HttpResponse
 
 from django.conf.urls.static import static
@@ -85,10 +81,7 @@ urlpatterns = [
     path("health/", lambda x: HttpResponse("OK"), name="health"),
 #    path('session/<id>/status/', status),
     path('login/', CustomAuthToken.as_view()),
-    path('verify/', verify),
     path('set-institutional-use/', set_institutional_use),
-    path('reset-otp-challenge/', reset_otp_challenge),
-    path('check-otp-verified/', check_otp_verified),
     path('admin/', admin.site.urls),
     path('register/', UserCreate.as_view(), name='account-create'),
     path('delete-account/', UserDelete.as_view(), name='account-delete'),

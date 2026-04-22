@@ -2,6 +2,7 @@ import boto3
 import uuid
 import sys
 import os
+import logging
 import qrcode
 import json
 import time
@@ -64,7 +65,6 @@ from mcserver.serializers import (
     SubjectTagSerializer,
     TrialTagSerializer
 )
-from mcserver.utils import send_otp_challenge
 from mcserver.zipsession import downloadAndZipSession, downloadAndZipSubject
 from mcserver.tasks import (
     download_session_archive,
@@ -88,6 +88,7 @@ from rest_framework.decorators import api_view, renderer_classes
 from rest_framework.renderers import JSONRenderer, TemplateHTMLRenderer
 from rest_framework import status
 
+logger = logging.getLogger(__name__)
 
 sys.path.insert(0, '/code/mobilecap')
 
@@ -95,7 +96,7 @@ class IsOwner(permissions.BasePermission):
     def has_permission(self, request, view):
         if not request.user.is_authenticated:
             return False
-        return request.user.otp_verified
+        return True
 
     def has_object_permission(self, request, view, obj):
         return obj.get_user() == request.user
@@ -2309,32 +2310,28 @@ class CustomAuthToken(ObtainAuthToken):
             serializer.is_valid(raise_exception=True)
             user = serializer.validated_data['user']
             token, created = Token.objects.get_or_create(user=user)
-            print(token)
+            logger.debug(
+                "Auth token get_or_create user_id=%s created=%s",
+                user.id,
+                created,
+            )
 
-            print("LOGGED IN")
-
-            # Skip OTP verification if specified
-            otp_challenge_sent = False
-
-            if not(user.otp_verified and user.otp_skip_till and user.otp_skip_till > timezone.now()):
-                user.otp_verified = False
+            logger.info("User logged in user_id=%s", user.id)
 
             user.save()
             login(request, user)
-            if not (user.otp_verified and user.otp_skip_till and user.otp_skip_till > timezone.now()):
-                send_otp_challenge(user)
-                otp_challenge_sent = True
+            logger.debug("Login session established user_id=%s", user.id)
 
         except ValidationError:
-            print("VALIDATION ERROR")    
-            print(str(traceback.format_exc()))
+            logger.warning(
+                "Login validation error\n%s",
+                traceback.format_exc(),
+            )
             if settings.DEBUG:
-                print(str(traceback.format_exc()))
                 raise APIException(_("error") % {"error_message": traceback.format_exc()})
             raise APIException(_('credentials_incorrect'))
         except Exception:
-            print("API EXCEPTION ERROR")    
-            print(str(traceback.format_exc()))
+            logger.exception("Login error")
             if settings.DEBUG:
                 raise APIException(_("error") % {"error_message": str(traceback.format_exc())})
             raise APIException(_('login_error'))
@@ -2342,7 +2339,6 @@ class CustomAuthToken(ObtainAuthToken):
         return Response({
             'token': token.key,
             'user_id': user.id,
-            'otp_challenge_sent': otp_challenge_sent,
             'institutional_use': user.institutional_use,
         })
 
@@ -2454,34 +2450,6 @@ class NewPasswordView(APIView):
 @api_view(('POST',))
 @renderer_classes((TemplateHTMLRenderer, JSONRenderer))
 @csrf_exempt
-def verify(request):
-    try:
-        device = request.user.emaildevice_set.all()[0]
-        data = json.loads(request.body.decode('utf-8'))
-        verified = device.verify_token(data["otp_token"])
-        print("VERIFICATION", verified)
-        request.user.otp_verified = verified
-
-        if 'remember_device' in data and data['remember_device']:
-            request.user.otp_skip_till = timezone.now() + timedelta(days=90)
-        request.user.save()
-
-    except Exception:
-        if settings.DEBUG:
-            raise APIException(_("error") % {"error_message": str(traceback.format_exc())})
-        raise APIException(_('verification_error'))
-
-    if not verified:
-        if settings.DEBUG:
-            raise APIException(_("error") % {"error_message": str(traceback.format_exc())})
-        raise NotAuthenticated(_('verification_code_incorrect'))
-
-    return Response({})
-
-
-@api_view(('POST',))
-@renderer_classes((TemplateHTMLRenderer, JSONRenderer))
-@csrf_exempt
 def set_institutional_use(request):
     try:
         data = json.loads(request.body.decode('utf-8'))
@@ -2493,27 +2461,6 @@ def set_institutional_use(request):
         raise APIException(_('set_institutional_use_error'))
 
     return Response({})
-
-
-@api_view(('POST',))
-@renderer_classes((TemplateHTMLRenderer, JSONRenderer))
-@csrf_exempt
-def reset_otp_challenge(request):
-    from mcserver.utils import send_otp_challenge
-
-    send_otp_challenge(request.user)
-
-    request.user.otp_verified = False
-    request.user.otp_skip_till = None
-    request.user.save()
-    return Response({'otp_challenge_sent': True})
-
-
-@api_view(('GET',))
-@renderer_classes((TemplateHTMLRenderer, JSONRenderer))
-@csrf_exempt
-def check_otp_verified(request):
-    return Response({'otp_verified': request.user.otp_verified})
 
 
 class UserInstitutionalUseView(APIView):

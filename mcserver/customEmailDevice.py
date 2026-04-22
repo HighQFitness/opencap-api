@@ -5,6 +5,7 @@ from django.conf import settings
 from django.template import Template, Context
 from django.template.loader import get_template
 
+
 class CustomEmailDevice(EmailDevice):
 
     def generate_challenge(self, extra_context=None):
